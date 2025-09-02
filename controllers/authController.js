@@ -8,30 +8,42 @@ const generateToken = (id, role) => {
 };
 
 // 👉 Register
-export const registerUser = (req, res) => {
-  const { name, email, password, role } = req.body;
+export const registerUser = async (req, res) => {
+  try {
+    const { name, email, password, role } = req.body;
+    console.log("Incoming data:", req.body);
 
-  User.findByEmail(email, async (err, existingUser) => {
-    if (err) return res.status(500).json({ message: "Server error" });
+    // 🔹 Check if user exists
+    const existingUser = await User.findByEmail(email);
     if (existingUser) {
       return res.status(400).json({ message: "User already exists" });
     }
 
+    // 🔹 Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    User.create({ name, email, password: hashedPassword, role }, (err, user) => {
-      if (err) return res.status(500).json({ message: "Error creating user" });
-
-      res.status(201).json({
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        role: user.role || "user",
-        token: generateToken(user.id, user.role || "user"),
-      });
+    // 🔹 Create user (await instead of callback)
+    const user = await User.create({
+      name,
+      email,
+      password: hashedPassword,
+      role,
     });
-  });
+
+    // 🔹 Send response
+    res.status(201).json({
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role || "user",
+      token: generateToken(user.id, user.role || "user"),
+    });
+  } catch (error) {
+    console.error("Register Error:", error);
+    res.status(500).json({ message: "Server error" });
+  }
 };
+
 
 // 👉 Login with role check and cookie
 export const loginUser = async (req, res) => {
@@ -75,4 +87,14 @@ export const loginUser = async (req, res) => {
       dashboard: "user-dashboard",
     });
   }
+};
+
+// 👉 Logout (clear cookie)
+export const logoutUser = (req, res) => {
+  res.clearCookie("token", {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
+  });
+  res.json({ message: "Logged out successfully" });
 };
