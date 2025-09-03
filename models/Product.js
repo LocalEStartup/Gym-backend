@@ -37,27 +37,57 @@ const Product = {
     });
   },
 
-  // Get active products
-  getActive: (callback) => {
-    const sql = "SELECT * FROM products WHERE active = 1";
+  // Get all products
+  getAll: (callback) => {
+    const sql = "SELECT * FROM products ORDER BY id DESC";
     db.query(sql, (err, results) => {
       if (err) return callback(err, null);
       callback(null, results);
     });
   },
 
-  // Soft delete (set active = 0)
-  softDelete: (id, callback) => {
-    const sql = "UPDATE products SET active = 0 WHERE id = ?";
-    db.query(sql, [id], (err, result) => {
+  // Get one
+  getById: (id, callback) => {
+    const sql = "SELECT * FROM products WHERE id = ?";
+    db.query(sql, [id], (err, results) => {
+      if (err) return callback(err, null);
+      callback(null, results[0]);
+    });
+  },
+
+  // Update (optionally update image)
+  update: (id, data, callback) => {
+    const { productname, description, price, image } = data;
+
+    let sql = "UPDATE products SET productname=?, description=?, price=?";
+    const values = [productname, description, price];
+
+    if (image) {
+      sql += ", image=?";
+      values.push(image);
+    }
+
+    sql += " WHERE id=?";
+    values.push(id);
+
+    db.query(sql, values, (err, result) => {
       if (err) return callback(err, null);
       callback(null, result);
     });
   },
 
-  // Reactivate (set active = 1)
-  activate: (id, callback) => {
-    const sql = "UPDATE products SET active = 1 WHERE id = ?";
+  // Set active explicitly
+  setActive: (id, active, callback) => {
+    const sql = "UPDATE products SET active = ? WHERE id = ?";
+    db.query(sql, [active, id], (err, result) => {
+      if (err) return callback(err, null);
+      callback(null, result);
+    });
+  },
+
+  // Delete permanently (DB row only — controller will remove file)
+  delete: (id, callback) => {
+    const sql = "DELETE FROM products WHERE id = ?";
     db.query(sql, [id], (err, result) => {
       if (err) return callback(err, null);
       callback(null, result);

@@ -1,86 +1,14 @@
-// import db from "../config/db.js";
-
-// // ✅ Add Product
-// export const addProduct = (req, res) => {
-//   const { productname, description, price } = req.body;
-//   const image = req.file ? req.file.filename : null;
-
-//   const sql =
-//     "INSERT INTO products (productname, description, price, image, active) VALUES (?, ?, ?, ?, ?)";
-//   db.query(sql, [productname, description, price, image, 1], (err, result) => {
-//     if (err) {
-//       console.error("Error inserting product:", err);
-//       return res.status(500).json({ error: "Database error" });
-//     }
-//     res.json({
-//       message: "✅ Product added successfully",
-//       productId: result.insertId,
-//     });
-//   });
-// };
-
-// // ✅ Get only active Products
-// export const getProducts = (req, res) => {
-//   db.query("SELECT * FROM products WHERE active = 1", (err, results) => {
-//     if (err) {
-//       return res.status(500).json({ error: "Database error" });
-//     }
-//     res.json(results);
-//   });
-// };
-
-// // ✅ Soft delete product (set active = 0)
-// export const deleteProduct = (req, res) => {
-//   const { id } = req.params;
-//   const sql = "UPDATE products SET active = 0 WHERE id = ?";
-//   db.query(sql, [id], (err) => {
-//     if (err) {
-//       return res.status(500).json({ error: "Database error" });
-//     }
-//     res.json({ message: "🚫 Product deactivated successfully" });
-//   });
-// };
-
-// // ✅ Reactivate product (set active = 1)
-// export const activateProduct = (req, res) => {
-//   const { id } = req.params;
-//   const sql = "UPDATE products SET active = 1 WHERE id = ?";
-//   db.query(sql, [id], (err) => {
-//     if (err) {
-//       return res.status(500).json({ error: "Database error" });
-//     }
-//     res.json({ message: "✅ Product activated successfully" });
-//   });
-// };
-
-
-
+import fs from "fs";
+import path from "path";
 import Product from "../models/Product.js";
 
-// ✅ Add Product
-// export const addProduct = (req, res) => {
-//   const { productname, description, price } = req.body;
-//   const image = req.file ? req.file.filename : null;
+const uploadsDir = path.resolve("uploads");
 
-//   Product.create({ productname, description, price, image }, (err, product) => {
-//     if (err) {
-//       console.error("❌ Error inserting product:", err);
-//       return res.status(500).json({ error: "Database error" });
-//     }
-//     res.json({
-//       message: "✅ Product added successfully",
-//       product,
-//     });
-//   });
-// };
-
+// ✅ Add product
 export const addProduct = (req, res) => {
-  console.log("📥 Body:", req.body);
-  console.log("📸 File:", req.file);
-
   const { productname, description, price } = req.body;
   const image = req.file ? req.file.filename : null;
-  
+
   Product.create({ productname, description, price, image }, (err, product) => {
     if (err) {
       console.error("❌ Error inserting product:", err);
@@ -90,35 +18,104 @@ export const addProduct = (req, res) => {
   });
 };
 
-
-// ✅ Get active products
+// ✅ Get all products
 export const getProducts = (req, res) => {
-  Product.getActive((err, products) => {
-    if (err) {
-      return res.status(500).json({ error: "Database error" });
-    }
+  Product.getAll((err, products) => {
+    if (err) return res.status(500).json({ error: "Database error" });
     res.json(products);
   });
 };
 
-// ✅ Soft delete product
-export const deleteProduct = (req, res) => {
+// ✅ Get product by ID
+export const getProductById = (req, res) => {
   const { id } = req.params;
-  Product.softDelete(id, (err) => {
+
+  Product.getById(id, (err, product) => {
     if (err) {
+      console.error("❌ Error fetching product:", err);
       return res.status(500).json({ error: "Database error" });
     }
-    res.json({ message: "🚫 Product deactivated successfully" });
+    if (!product) {
+      return res.status(404).json({ error: "Product not found" });
+    }
+    res.json(product);
   });
 };
 
-// ✅ Reactivate product
-export const activateProduct = (req, res) => {
+
+// ✅ Toggle active/inactive (single endpoint)
+export const toggleActive = (req, res) => {
   const { id } = req.params;
-  Product.activate(id, (err) => {
-    if (err) {
-      return res.status(500).json({ error: "Database error" });
+  Product.getById(id, (err, product) => {
+    if (err || !product) return res.status(404).json({ error: "Product not found" });
+
+    const nextActive = product.active === 1 ? 0 : 1;
+    Product.setActive(id, nextActive, (err2) => {
+      if (err2) return res.status(500).json({ error: "Database error" });
+      res.json({
+        message: nextActive ? "✅ Product activated" : "🚫 Product deactivated",
+        active: nextActive,
+      });
+    });
+  });
+};
+
+// ✅ Update product (replace image if new file uploaded; delete old file)
+export const updateProduct = (req, res) => {
+  const { id } = req.params;
+  const { productname, description, price } = req.body;
+  const newImage = req.file ? req.file.filename : null;
+
+  Product.getById(id, (err, existing) => {
+    if (err || !existing) return res.status(404).json({ error: "Product not found" });
+
+    // If a new file is uploaded, delete the old file
+    if (newImage && existing.image) {
+      const oldPath = path.join(uploadsDir, existing.image);
+      fs.unlink(oldPath, (uErr) => {
+        // Ignore ENOENT (file already missing), log others
+        if (uErr && uErr.code !== "ENOENT") {
+          console.error("❌ Failed to remove old file:", uErr);
+        }
+      });
     }
-    res.json({ message: "✅ Product activated successfully" });
+
+    Product.update(
+      id,
+      {
+        productname,
+        description,
+        price,
+        image: newImage || undefined, // only update image if new one exists
+      },
+      (uErr) => {
+        if (uErr) return res.status(500).json({ error: "Database error" });
+        res.json({ message: "✅ Product updated successfully" });
+      }
+    );
+  });
+};
+
+// ✅ Permanent delete (delete DB row + image file)
+export const deleteProductPermanent = (req, res) => {
+  const { id } = req.params;
+
+  Product.getById(id, (err, product) => {
+    if (err || !product) return res.status(404).json({ error: "Product not found" });
+
+    // Delete image if exists
+    if (product.image) {
+      const filePath = path.join(uploadsDir, product.image);
+      fs.unlink(filePath, (uErr) => {
+        if (uErr && uErr.code !== "ENOENT") {
+          console.error("❌ File delete error:", uErr);
+        }
+      });
+    }
+
+    Product.delete(id, (dErr) => {
+      if (dErr) return res.status(500).json({ error: "Database error" });
+      res.json({ message: "🗑️ Product permanently deleted" });
+    });
   });
 };
