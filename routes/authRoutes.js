@@ -1,5 +1,5 @@
 import express from "express";
-import { registerUser, loginUser } from "../controllers/authController.js";
+import { registerUser, loginUser , logoutUser } from "../controllers/authController.js";
 import { adminOnly , protect } from "../middleware/authMiddleware.js";
 const router = express.Router();
 
@@ -18,4 +18,5 @@ router.get("/admin-dashboard", adminOnly, (req, res) => {
   res.json({ message: "Welcome Admin!", user: req.user });
 });
 
+router.post("/logout", logoutUser);
 export default router;

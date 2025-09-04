@@ -20,7 +20,7 @@ const storage = multer.diskStorage({
 const upload = multer({ storage });
 
 // READ — logged-in users
-router.get("/", protect, getProducts);
+router.get("/", getProducts);
 router.get("/:id", protect,getProductById);
 
 
