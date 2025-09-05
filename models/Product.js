@@ -39,7 +39,7 @@ const Product = {
 
   // Get all products
   getAll: (callback) => {
-    const sql = "SELECT * FROM products ORDER BY id DESC";
+    const sql = "SELECT * FROM products WHERE active=1 ORDER BY id DESC";
     db.query(sql, (err, results) => {
       if (err) return callback(err, null);
       callback(null, results);
