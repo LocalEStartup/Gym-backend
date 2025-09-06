@@ -4,6 +4,7 @@ import cors from "cors";
 import db from "./config/db.js";
 import productRoutes from "./routes/products.js";
 import authRoutes from "./routes/authRoutes.js";
+import trainerRoutes from "./routes/trainerRoutes.js"
 import cookieParser from "cookie-parser";
 
 dotenv.config();
@@ -32,6 +33,7 @@ app.get("/api/test", (req, res) => {
 
 //  API Routes
 app.use("/api/products", productRoutes);
+app.use("/api/trainers", trainerRoutes);
 
 app.use("/api/auth", authRoutes);
 

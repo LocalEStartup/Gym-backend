@@ -98,3 +98,15 @@ export const logoutUser = (req, res) => {
   });
   res.json({ message: "Logged out successfully" });
 };
+
+// 👉 Get all users
+export const getAllUsers = async (req, res) => {
+  try {
+    const users = await User.getAll();
+
+    res.json(users); // directly return list of users
+  } catch (error) {
+    console.error("Get Users Error:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};

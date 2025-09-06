@@ -1,7 +1,9 @@
 import express from "express";
-import { registerUser, loginUser , logoutUser } from "../controllers/authController.js";
-import { adminOnly , protect } from "../middleware/authMiddleware.js";
+import { getAllUsers, registerUser, loginUser, logoutUser } from "../controllers/authController.js";
+import { adminOnly, protect } from "../middleware/authMiddleware.js";
 const router = express.Router();
+
+router.get('/users', protect, adminOnly, getAllUsers);
 
 // @route   POST /api/auth/register
 router.post("/register", registerUser);
