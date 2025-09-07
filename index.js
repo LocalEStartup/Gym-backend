@@ -3,9 +3,11 @@ import dotenv from "dotenv";
 import cors from "cors";
 import db from "./config/db.js";
 import productRoutes from "./routes/products.js";
+import cartRoutes from "./routes/CartRoutes.js"
 import authRoutes from "./routes/authRoutes.js";
 import trainerRoutes from "./routes/trainerRoutes.js"
 import cookieParser from "cookie-parser";
+import orderRoutes from "./routes/orderRoutes.js";
 
 dotenv.config();
 
@@ -32,9 +34,12 @@ app.get("/api/test", (req, res) => {
 });
 
 //  API Routes
+
+app.use("/api/cart", cartRoutes);
 app.use("/api/products", productRoutes);
 app.use("/api/trainers", trainerRoutes);
 
+app.use("/api/orders", orderRoutes);
 app.use("/api/auth", authRoutes);
 
 //  Default Route
