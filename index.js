@@ -40,7 +40,7 @@ app.use("/api/products", productRoutes);
 app.use("/api/trainers", trainerRoutes);
 
 app.use("/api/orders", orderRoutes);
-app.use("/api/auth", authRoutes);
+app.use("/api/auth", authRoutes)
 
 //  Default Route
 app.get("/", (req, res) => {
